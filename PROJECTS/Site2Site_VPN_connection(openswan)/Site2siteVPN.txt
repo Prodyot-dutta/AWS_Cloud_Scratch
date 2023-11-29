@@ -1,0 +1,92 @@
+//step 1 :
+
+	Azure : Create Networks and Virtual Machine
+		customer Public IP
+		username with password (not ssh)
+		public ip
+	AWS :
+		AWS Virtual private gateway ID Create
+		Customer Gateway ID create(IP-Azure Public IP)
+		Site 2 site connection VPN create(VPG,CGW,Static)
+
+
+//step 2 : Install OPenswan 
+	
+	$ ssh username@publicip
+	$ sudo su
+	$ yum install openswan -y
+	$ In vim/etc/ipsec.d/*.conf (Need to uncomment,if comment)
+	
+	
+//step 3 : Update $ vim /etc/sysctl.conf to have the  folloing
+
+	net.ipv4.ip_forward = 1
+	net.ipv4.conf.all.accept_redirects = 0
+	net.ipv4.conf.all.send_redirects = 0
+
+
+//step 4 : $ vim /etc/ipsec.d/aws-vpn.conf
+
+conn Tunnel1
+	authby=secret
+	auto=start
+	left=%defaultroute
+	leftid=Customer end Gateway VPN public IP
+	right=AWS Virtual private gateway ID- public IP
+	type=tunnel
+	ikelifetime=8h
+	keylife=1h
+	phase2alg=aes128-sha1;modp1024
+	ike=aes128-sha1;modp1024
+	keyingtries=%forever
+	keyexchange=ike
+	leftsubnet=Customer end VPN CIDR(Azure CIDR)
+	rightsubnet=AWS end VPN CIDR(AWS CIDR)
+	dpddelay=10
+	dpdtimeout=30
+	dpdaction=restart_by_peer
+
+
+
+//step 5 : Content for $ vim /etc/ipsec.d/aws-vpn.secrets 
+
+	aws : Download configuration file from site to site VPN connection in (Select Generic Vendor)
+
+	customer IP Address: 172.203.240.28
+	aws vgw public Ip : 169.254.147.17/30
+
+
+	(customer public Ip) (aws vgw public Ip): PSK "shared secret key"m from config doc
+
+	172.203.240.28 169.254.147.17/30: PSK "5DiYnfx2J6GWBmhitiEg9"
+
+
+//step 6 :
+
+	Goto aws side enable route propagation in routetable
+
+
+//step 7 : Commands to enable/start  ipsec service
+
+	$ chkconfig ipsec on
+	$ service ipsec start
+	$ service ipsec status
+	$ service ipsec restart
+
+
+//step 8 : 
+	Create EC2 instance
+	ping privateip of EC2 instance - It will not ping 
+
+
+//step 9 : Route table - Edit Route 
+	Add 10.0.1.0/24 - Virtual private gateway Attach
+	Now ping privateip of EC2 instance - Packets will be sending - Due to VPN Connection 
+
+
+//step 10 : Goto Site to Site VPN Connection
+		Static Route - Edit Route - Remove the Route
+		Now Packets will not sending - after few minutes
+		Again add Static Route - Packets will be sending
+
+

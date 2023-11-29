@@ -1,0 +1,36 @@
+USER NAME & PASSWORD:-
+admin123
+admin123
+
+ENDPOINT:-
+rds-test.c0capommwqmn.us-east-1.rds.amazonaws.com
+
+
+After SSH Connection -
+sudo su
+mysql -h rds-test.c0capommwqmn.us-east-1.rds.amazonaws.com -P 3306 -u admin123 -p
+
+SHOW DATABASES;
+
+CREATE DATABASE COMPANY;
+USE DATABASE;
+
+SHOW DATABASES;
+
+CREATE TABLE EMPLOYEE(
+    EMP_id INT AUTO_INCREMENT PRIMARY KEY,
+    EMP_name VARCHAR(50) NOT NULL,
+    EMP_age INT,
+    EMP_grade VARCHAR(10)
+);
+
+
+INSERT INTO EMPLOYEE( EMP_id,EMP_name ,EMP_age, EMP_grade) VALUES (1,'AJAY',20, 'A');
+INSERT INTO EMPLOYEE( EMP_id,EMP_name ,EMP_age, EMP_grade) VALUES (2,'nishan',22, 'B');
+INSERT INTO EMPLOYEE( EMP_id,EMP_name ,EMP_age, EMP_grade) VALUES (3,'Akshay',21, 'C');
+INSERT INTO EMPLOYEE( EMP_id,EMP_name ,EMP_age, EMP_grade) VALUES (4,'subham',23, 'D');
+INSERT INTO EMPLOYEE( EMP_id,EMP_name ,EMP_age, EMP_grade) VALUES (5,'rahul',25, 'E');
+
+SHOW TABLES;
+
+SELECT * FROM STUDENT;

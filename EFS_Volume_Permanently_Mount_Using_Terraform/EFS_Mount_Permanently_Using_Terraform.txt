@@ -1,0 +1,73 @@
+
+
+Step-1: Create (VPC + subnet + RT + IGW)
+	Create a Linux Server 
+	
+Step-2: SSH connection 
+	$ sudo su
+	$ cd
+	$ sudo yum install -y yum-utils
+	$ sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+	$ sudo yum -y install terraform 
+
+Step-3: aws configure
+		Access key id
+		Sercret key id
+
+Step-4: $ vi main.tf
+		Paste the below code - Before copy take 
+		vpc_id , file_system_id, subnet_id, subnet_id, security-group, key_name, ami-id
+		
+		
+
+provider "aws" {
+  region = "us-east-1"  
+}
+
+data "aws_efs_file_system" "existing_efs" {
+  file_system_id = "fs-0f0e810c122e5d3dd"
+}
+
+resource "aws_security_group" "efs_sg" {
+  vpc_id = "vpc-006c1c87fd8c530fa"
+
+  ingress {
+    from_port   = 2049
+    to_port     = 2049
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_mount_target" "efs_mount_target" {
+  count          = 1
+  file_system_id = data.aws_efs_file_system.existing_efs.id
+  subnet_id      = "subnet-081a694b9ec3e702b"
+  security_groups = [aws_security_group.efs_sg.id]
+}
+
+resource "aws_instance" "ec2_instance" {
+  ami             = "ami-0230bd60aa48260c6"
+  instance_type   = "t2.micro"  
+  key_name        = "test-key"  
+  subnet_id       = "subnet-081a694b9ec3e702b"
+  vpc_security_group_ids = [aws_security_group.efs_sg.id]
+
+  user_data = <<-EOF
+              #!/bin/bash
+              yum install -y nfs-utils
+              mkdir /mnt/efs
+              mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${data.aws_efs_file_system.existing_efs.dns_name}:/ /mnt/efs
+              EOF
+
+  tags = {
+    Name = "terraform_server"
+  }
+}
+
+
+Step-5: $ terraform init
+	$ terraform validate
+	$ terraform plan
+	$ terraform apply
+	$ terraform destroy

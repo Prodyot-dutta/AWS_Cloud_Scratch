@@ -1,0 +1,89 @@
+
+#Step-1 : Create EC2 instance - GP2 Volume
+				Create Snapshot from that volume 
+
+
+#Step-2 : Goto Lambda Function
+		Create Function
+		Author From Scratch 
+		Python - Create Function
+		
+		Copy the boto module function from Github Repo - Paste in Function.py 
+		( https://github.com/iam-veeramalla/aws-devops-zero-to-hero/blob/main/day-18/ebs_stale_snapshosts.py )
+
+
+import boto3
+
+def lambda_handler(event, context):
+    ec2 = boto3.client('ec2')
+
+    # Get all EBS snapshots
+    response = ec2.describe_snapshots(OwnerIds=['self'])
+
+    # Get all active EC2 instance IDs
+    instances_response = ec2.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
+    active_instance_ids = set()
+
+    for reservation in instances_response['Reservations']:
+        for instance in reservation['Instances']:
+            active_instance_ids.add(instance['InstanceId'])
+
+    # Iterate through each snapshot and delete if it's not attached to any volume or the volume is not attached to a running instance
+    for snapshot in response['Snapshots']:
+        snapshot_id = snapshot['SnapshotId']
+        volume_id = snapshot.get('VolumeId')
+
+        if not volume_id:
+            # Delete the snapshot if it's not attached to any volume
+            ec2.delete_snapshot(SnapshotId=snapshot_id)
+            print(f"Deleted EBS snapshot {snapshot_id} as it was not attached to any volume.")
+        else:
+            # Check if the volume still exists
+            try:
+                volume_response = ec2.describe_volumes(VolumeIds=[volume_id])
+                if not volume_response['Volumes'][0]['Attachments']:
+                    ec2.delete_snapshot(SnapshotId=snapshot_id)
+                    print(f"Deleted EBS snapshot {snapshot_id} as it was taken from a volume not attached to any running instance.")
+            except ec2.exceptions.ClientError as e:
+                if e.response['Error']['Code'] == 'InvalidVolume.NotFound':
+                    # The volume associated with the snapshot is not found (it might have been deleted)
+                    ec2.delete_snapshot(SnapshotId=snapshot_id)
+                    print(f"Deleted EBS snapshot {snapshot_id} as its associated volume was not found.")
+
+
+#Step-3 : 
+	Then --->
+	->ctrl+s 
+	->Deploy  
+	->Test 
+
+	->Event name -test
+	->Save
+	->Failed because we dont give permission for manually Triggering
+
+
+#Step-4 : Configuration
+	  -> Edit ->Timeout-3 sec(default) - Do increase - 10 sec
+	  -> save
+	  
+	-> Permissions 
+	-> Role name -> Add new permission(Very difficult to find snapshop policy so create policy)
+	-> Create policy -> EC2 policy select -> Search snapshot there and add 4 policies:
+				(Describesnapshot,
+				 Describeinstance,
+				 Deletesnapshot,
+				 Describevolume)
+	-> Resource - All
+	-> Name -> Create
+	-> Now Attach Created Policy
+	-> Now Test the Function.py, It will executed
+
+
+#Step-5 : -> Now delete the EC2 instance 
+	  -> Volume got deleted But Snapshot remains the same not deleted
+	  -> Goto the Lambda Function -> Test the code again 
+				      -> Snapshot will deleted by Lambda Function
+
+
+So, This is the one-way that We Optimize the Cost.
+	
